@@ -23,6 +23,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
+# After a build, JUCE can copy the plugin straight into the system plugin folder
+# so it shows up in your DAW immediately. That's great on your own machine, but on
+# a shared build machine (e.g. GitHub's cloud) that folder may be locked down and
+# the copy can fail the build. So it's a switch: ON by default (local dev),
+# turned OFF in CI with  -D JSPLIT_COPY_AFTER_BUILD=OFF
+option(JSPLIT_COPY_AFTER_BUILD "Copy the built plugin into the system VST3 folder after building" ON)
+
 juce_add_plugin(Jsplit
     PRODUCT_NAME              "Jsplit"
     COMPANY_NAME             "Jsplit"
@@ -33,7 +40,7 @@ juce_add_plugin(Jsplit
     NEEDS_MIDI_INPUT          FALSE
     NEEDS_MIDI_OUTPUT         FALSE
     IS_MIDI_EFFECT            FALSE
-    COPY_PLUGIN_AFTER_BUILD   TRUE
+    COPY_PLUGIN_AFTER_BUILD   ${JSPLIT_COPY_AFTER_BUILD}
     VST3_CATEGORIES           "Fx" "Tools"
 )
 

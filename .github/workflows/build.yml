@@ -1,0 +1,130 @@
+name: Build Jsplit
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  This builds Jsplit on GitHub's OWN Windows machines.
+#  You do NOT need Visual Studio, CMake, or anything installed on your PC.
+#
+#  HOW TO RUN IT (no coding, all in the browser):
+#    1. Make sure this file is on GitHub (push it once — see the chat).
+#    2. Go to  https://github.com/pressnoll/Jsplit  →  the "Actions" tab.
+#    3. Click "Build Jsplit" on the left, then "Run workflow" (button, top-right).
+#    4. Wait ~15 minutes. A green check ✔ means it's done.
+#    5. Open the finished run and scroll to the bottom → "Artifacts".
+#         • JsplitSetup   = the installer to SHARE with people.
+#         • Jsplit-plugin = the raw plugin + a standalone app to test yourself.
+#
+#  It also runs automatically whenever you push changes to the plugin/engine.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  # "Run workflow" button in the Actions tab:
+  workflow_dispatch:
+    inputs:
+      offline_installer:
+        description: "Bundle ALL Python packages inside the installer? Makes it big (~800MB) but it needs NO internet to install. Leave unchecked for a small installer that downloads packages during setup."
+        type: boolean
+        default: false
+      app_version:
+        description: "Version label for this build (e.g. 0.1.0)"
+        type: string
+        default: "0.1.0"
+
+  # Also build automatically on pushes that touch the plugin or engine:
+  push:
+    branches: [ main ]
+    paths:
+      - 'plugin/**'
+      - 'installer/**'
+      - 'src/**'
+      - 'scripts/**'
+      - 'requirements.txt'
+      - '.github/workflows/build.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest          # a Windows machine with Visual Studio 2022 already on it
+    timeout-minutes: 90
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Show build tools
+        shell: pwsh
+        run: |
+          cmake --version
+          Write-Host "Visual Studio 2022 build tools are preinstalled on this runner."
+
+      # ── 1 · compile the plugin (VST3 + a standalone .exe) ────────────────────
+      - name: Compile the plugin
+        shell: pwsh
+        run: |
+          cmake -S plugin -B plugin/build -G "Visual Studio 17 2022" -A x64 -D JSPLIT_COPY_AFTER_BUILD=OFF
+          cmake --build plugin/build --config Release
+
+      - name: Gather the plugin files
+        if: always()
+        shell: pwsh
+        run: |
+          $art = "artifacts/plugin"
+          New-Item -ItemType Directory -Force -Path $art | Out-Null
+
+          $vst3 = Get-ChildItem plugin/build -Recurse -Directory -Filter "Jsplit.vst3" -ErrorAction SilentlyContinue |
+                  Select-Object -First 1
+          if ($vst3) { Copy-Item $vst3.FullName $art -Recurse; Write-Host "VST3: $($vst3.FullName)" }
+          else       { Write-Host "::warning::Jsplit.vst3 was not found under plugin/build" }
+
+          $exe = Get-ChildItem plugin/build -Recurse -File -Filter "Jsplit.exe" -ErrorAction SilentlyContinue |
+                 Where-Object { $_.FullName -like "*Standalone*" } |
+                 Select-Object -First 1
+          if ($exe) { Copy-Item $exe.FullName $art; Write-Host "Standalone app: $($exe.FullName)" }
+
+      - name: Upload the plugin (VST3 + standalone app)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jsplit-plugin
+          path: artifacts/plugin
+          if-no-files-found: warn
+
+      # ── 2 · build the shareable installer ────────────────────────────────────
+      - name: Install Inno Setup (the installer compiler)
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Build the installer (JsplitSetup.exe)
+        shell: pwsh
+        run: |
+          $offline = ("${{ github.event.inputs.offline_installer }}" -eq "true")
+          $ver = "${{ github.event.inputs.app_version }}"
+          if ([string]::IsNullOrWhiteSpace($ver)) { $ver = "0.1.0" }
+          Write-Host "Bundle packages offline: $offline    Version: $ver"
+          & "installer/build_installer.ps1" -Offline:$offline -AppVer $ver
+
+      - name: Upload the installer
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: JsplitSetup
+          path: dist/JsplitSetup.exe
+          if-no-files-found: warn
+
+      # ── 3 · print plain-language instructions on the run page ────────────────
+      - name: What to do next
+        if: always()
+        shell: pwsh
+        run: |
+          $summary = @'
+## Jsplit build finished
+
+Download your files below, under **Artifacts**:
+
+- **JsplitSetup** — the installer to share. People run it and it puts the plugin
+  where DAWs look for it and sets up the AI engine automatically.
+- **Jsplit-plugin** — the raw VST3 plus a standalone "Jsplit.exe" you can run on
+  its own to test everything without a DAW.
+
+Note: the very first time Jsplit runs it downloads the AI models
+(a few hundred MB). That is normal and only happens once.
+'@
+          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8

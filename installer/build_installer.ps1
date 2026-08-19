@@ -50,8 +50,11 @@ if (-not $iscc) {
 Write-Host "iscc: $iscc"
 
 # ── 1. build the plugin ────────────────────────────────────────────────────
+# JSPLIT_COPY_AFTER_BUILD=OFF: the installer places the VST3 itself, so we don't
+# want the build to also copy it into this machine's system folder (which is what
+# lets the same script run unchanged on a locked-down cloud build machine).
 Step "Building VST3 (CMake / Visual Studio)"
-cmake -S (Join-Path $root "plugin") -B $build -G "Visual Studio 17 2022" -A x64
+cmake -S (Join-Path $root "plugin") -B $build -G "Visual Studio 17 2022" -A x64 -D JSPLIT_COPY_AFTER_BUILD=OFF
 cmake --build $build --config Release --target Jsplit_VST3
 
 $vst3 = Get-ChildItem -Path $build -Recurse -Directory -Filter "Jsplit.vst3" |
