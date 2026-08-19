@@ -1,0 +1,38 @@
+# ── Python ──────────────────────────────────────────────
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Models / caches (downloaded on first run, don't commit) ──
+models/onnx/*.onnx
+trt_cache/
+*.ckpt
+*.pt
+*.pth
+
+# ── Audio (large + often copyrighted — keep out of the repo) ──
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+
+# ── Outputs ─────────────────────────────────────────────
+outputs/
+outputs_v2/
+outputs_opt/
+outputs_jsplit/
+outputs_*/
+
+# ── Installer build artifacts ───────────────────────────
+installer/staging/
+dist/
+plugin/build/
+*.tar.gz
+
+# ── OS / editor ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

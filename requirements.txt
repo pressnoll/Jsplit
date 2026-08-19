@@ -1,0 +1,30 @@
+# Jsplit — dependencies
+# Pinned to a known-good, tested set (CPU build of torch).
+#
+# ── GPU (NVIDIA) ────────────────────────────────────────────────────────────
+# The default torch below is CPU-only. For an NVIDIA GPU, install torch/
+# torchaudio from the CUDA index INSTEAD of the lines below, e.g.:
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
+# ── GPU (AMD / Intel iGPU on Windows, or Apple Silicon) ─────────────────────
+# Use the ONNX Runtime path (DirectML / CoreML). See README "Optimization".
+
+torch==2.13.0
+torchaudio==2.11.0
+
+demucs==4.1.0
+melband-roformer-infer==0.1.5
+
+soundfile==0.14.0
+librosa==0.11.0
+scipy==1.17.1
+numpy==2.4.6
+einops==0.8.2
+julius==0.2.8
+ml_collections
+pyyaml
+tqdm
+
+# optimization / benchmarking / export
+onnxruntime==1.29.0        # swap for onnxruntime-directml or onnxruntime-gpu per device
+onnx==1.22.0
+psutil                     # peak-RAM stats in scripts/benchmark.py
