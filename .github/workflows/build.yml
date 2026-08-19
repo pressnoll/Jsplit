@@ -114,17 +114,17 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $summary = @'
-## Jsplit build finished
-
-Download your files below, under **Artifacts**:
-
-- **JsplitSetup** — the installer to share. People run it and it puts the plugin
-  where DAWs look for it and sets up the AI engine automatically.
-- **Jsplit-plugin** — the raw VST3 plus a standalone "Jsplit.exe" you can run on
-  its own to test everything without a DAW.
-
-Note: the very first time Jsplit runs it downloads the AI models
-(a few hundred MB). That is normal and only happens once.
-'@
-          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8
+          $md = @(
+            '## Jsplit build finished',
+            '',
+            'Download your files below, under **Artifacts**:',
+            '',
+            '- **JsplitSetup** - the installer to share. People run it and it puts the',
+            '  plugin where DAWs look for it and sets up the AI engine automatically.',
+            '- **Jsplit-plugin** - the raw VST3 plus a standalone Jsplit.exe you can',
+            '  run on its own to test everything without a DAW.',
+            '',
+            'Note: the very first time Jsplit runs it downloads the AI models',
+            '(a few hundred MB). That is normal and only happens once.'
+          )
+          ($md -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8
