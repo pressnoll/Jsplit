@@ -42,7 +42,12 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest          # a Windows machine with Visual Studio 2022 already on it
+    # Pinned to the Windows Server 2022 image, which ships Visual Studio 2022 —
+    # the "Visual Studio 17 2022" generator this project uses. (Do NOT use
+    # windows-latest: it has moved to a newer image without VS 2022, which breaks
+    # the generator. If windows-2022 is ever retired, switch the generator to the
+    # newer VS version on both this file and installer/build_installer.ps1.)
+    runs-on: windows-2022
     timeout-minutes: 90
 
     steps:
@@ -53,7 +58,7 @@ jobs:
         shell: pwsh
         run: |
           cmake --version
-          Write-Host "Visual Studio 2022 build tools are preinstalled on this runner."
+          Write-Host "Runner image: $env:ImageOS"
 
       # ── 1 · compile the plugin (VST3 + a standalone .exe) ────────────────────
       - name: Compile the plugin
