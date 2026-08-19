@@ -43,6 +43,9 @@ target_sources(Jsplit PRIVATE
     Source/SeparationBridge.cpp
 )
 
+# our sources use #include <JuceHeader.h>, which must be generated explicitly
+juce_generate_juce_header(Jsplit)
+
 target_compile_definitions(Jsplit PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
