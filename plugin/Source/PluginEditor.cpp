@@ -75,8 +75,14 @@ JsplitAudioProcessorEditor::JsplitAudioProcessorEditor (JsplitAudioProcessor& p)
     addAndMakeVisible (fileLabel);
 
     // ── 2 · quality ──
-    qualityBox.addItemList ({ "fast", "balanced", "full", "max" }, 1);
-    qualityBox.setText (s.getProperty (kQuality, "full").toString(), juce::dontSendNotification);
+    const juce::StringArray tiers { "fast", "balanced", "full", "max" };
+    qualityBox.addItemList (tiers, 1);
+    {
+        auto saved = s.getProperty (kQuality, "full").toString();
+        int idx = tiers.indexOf (saved);
+        if (idx < 0) idx = tiers.indexOf ("full");
+        qualityBox.setSelectedItemIndex (idx, juce::dontSendNotification);
+    }
     qualityBox.onChange = [this]
     {
         proc.state().setProperty (kQuality, qualityBox.getText(), nullptr);

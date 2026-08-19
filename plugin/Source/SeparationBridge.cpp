@@ -58,40 +58,64 @@ void SeparationBridge::run()
 
     juce::File resolvedOut = cfg.outputDir.getChildFile (cfg.inputFile.getFileNameWithoutExtension());
     juce::String carry;
-
-    // Stream output as it arrives.
     char chunk[2048];
+
+    auto handleChunk = [&] (int n)
+    {
+        carry += juce::String::fromUTF8 (chunk, n);
+        for (;;)
+        {
+            auto nl = carry.indexOfChar ('\n');
+            if (nl < 0) break;
+            auto line = carry.substring (0, nl).trimEnd();
+            carry = carry.substring (nl + 1);
+
+            if (line.startsWith ("JSPLIT_OUTPUT_DIR="))
+                resolvedOut = juce::File (line.fromFirstOccurrenceOf ("JSPLIT_OUTPUT_DIR=", false, false).trim());
+            else if (line.isNotEmpty() && onLine)
+                onLine (line);
+        }
+    };
+
+    // Stream output as it arrives (ChildProcess::readProcessOutput is non-blocking-ish:
+    // it returns whatever is available, 0 when nothing is ready right now).
     while (! threadShouldExit())
     {
         int n = 0;
         {
             const juce::ScopedLock sl (procLock);
             if (proc == nullptr) break;
-            if (! proc->isRunning() && proc->getNumBytesAvailableToRead() <= 0)
-                break;
             n = proc->readProcessOutput (chunk, (int) sizeof (chunk));
         }
 
         if (n > 0)
         {
-            carry += juce::String::fromUTF8 (chunk, n);
-            for (;;)
-            {
-                auto nl = carry.indexOfChar ('\n');
-                if (nl < 0) break;
-                auto line = carry.substring (0, nl).trimEnd();
-                carry = carry.substring (nl + 1);
-
-                if (line.startsWith ("JSPLIT_OUTPUT_DIR="))
-                    resolvedOut = juce::File (line.fromFirstOccurrenceOf ("JSPLIT_OUTPUT_DIR=", false, false).trim());
-                else if (line.isNotEmpty() && onLine)
-                    onLine (line);
-            }
+            handleChunk (n);
         }
         else
         {
+            bool running;
+            {
+                const juce::ScopedLock sl (procLock);
+                running = (proc != nullptr && proc->isRunning());
+            }
+            if (! running) break;   // process ended, nothing left to read
             wait (50);
         }
+    }
+
+    // Final drain: the process may have exited with bytes still buffered in the
+    // pipe (this is where the JSPLIT_OUTPUT_DIR= line usually lands).
+    for (;;)
+    {
+        int n = 0;
+        {
+            const juce::ScopedLock sl (procLock);
+            if (proc == nullptr) break;
+            n = proc->readProcessOutput (chunk, (int) sizeof (chunk));
+        }
+        if (n <= 0) break;
+        handleChunk (n);
     }
 
     if (carry.trim().isNotEmpty() && onLine)

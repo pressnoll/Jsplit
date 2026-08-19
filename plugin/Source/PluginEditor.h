@@ -58,8 +58,8 @@ private:
     // action
     juce::TextButton generateButton { "Generate stems" };
     juce::TextButton openFolderButton { "Open export folder" };
-    juce::ProgressBar progressBar { progress };
     double progress { 0.0 };
+    juce::ProgressBar progressBar { progress };
 
     // status log
     juce::TextEditor statusLog;
